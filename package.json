@@ -1,0 +1,19 @@
+{
+  "name": "etholhook",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "granum",
+  "type": "module",
+  "main": "index.js , dump.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "mocha": "11.0.1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.1.0"
+  }
+}
