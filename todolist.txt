@@ -1,0 +1,4 @@
+1. add check new notification feature, save it into log json and use it to compare to newest notification
+2. improve the reading arg function and implementation
+3. change the getmatkul implementation to fully utilize json, not string
+4. as point above, remove usage of jq
