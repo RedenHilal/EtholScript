@@ -8,7 +8,7 @@ A simple program to automate your ethol activities, like checking assignments an
 
 ## Dependencies
 
--> jq -- Program to manipulate json data
+-> puppeteer js
 
 ## Usage/Examples
 
