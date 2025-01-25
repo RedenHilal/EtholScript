@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os'
 
+
 const envOs = os.platform === "win32"? "windows":"linux"
 
 const filename = fileURLToPath(import.meta.url)
@@ -24,10 +25,21 @@ const flags  = {
     debug:0,
     assignmentRaw:0,
     matkulsRaw:0,
-    matkulList:0
+    matkulList:0,
+    checkNotif:0
 }
 
 const arrayMatkul = (await readMatkulJSON()).map((el)=>el.matakuliah.nama)
+
+async function setUser(name,pass){
+    try{
+        fs.writeFileSync(`${dirpath}/.env`, `USERNAME=${name}\nPASSWORD=${pass}`)
+        console.log("Config Updated Successfully")
+    }
+    catch(err){
+        console.log(err)
+    }
+}
 
 async function getBinaryPath(){
     return new Promise((resolve,reject)=>{
@@ -89,9 +101,10 @@ async function RenewMapel(response){
         if(urlRegex.test(responUrl)){
             const body = await response.json()
             await fs.writeFileSync(`${dirpath}/matkulDetail.json`, JSON.stringify(body,null,2))
+            console.log("Renewed Successfully")
+            await importMatkul()
         }
-        console.log("Renewed Successfully")
-        await importMatkul()
+        
         
     } catch(err){
         console.error(err)
@@ -190,10 +203,45 @@ async function checkNewAssignment(response){
         }
     }   
 }
+async function checkNewNotification(response){
+    const responseUrl = await response.request().url()
+    try{
+        if (responseUrl === "https://ethol.pens.ac.id/api/notifikasi/mahasiswa?filterNotif=TUGAS"){
+            const body = await response.json()
+            if(!fs.existsSync(`${dirpath}/notiflog.json`)){
+                await fs.writeFileSync(`${dirpath}/notiflog.json`,JSON.stringify(body,null,2))
+                console.log("Log Created");
+            } 
+            else {
+                const prevFile = await fs.readFileSync(`${dirpath}/notiflog.json`,'utf8')
+                const prevLog = await JSON.parse(prevFile)
+                const prevLength = prevLog.length
+                const curLemgth = body.length
+                
+                if(prevLength<curLemgth){
+                    await fs.writeFileSync(`${dirpath}/notiflog.json`, JSON.stringify(body,null,2))
+                    const notifNum = curLemgth - prevLength
+                    //const newNotif = body.slice(curLemgth-(prevLength+1))
+                    console.log(`${notifNum} New Notification\n`)
+                    for(let i = 0;i<notifNum;i++ ){
+                        console.log(`${i+1} ${body[i].kodeNotifikasi}\n    Keterangan:${body[i].keterangan}\n`)
+                    }
+                }
+                else{
+                    console.log("No New Notification Available")
+                }
+            }
+    
+        }
+    }
+    catch(err){
+        console.log(err)
+    }
+}
 
 async function EtholHook(){
 
-    if(!flags.absen && !flags.checkAssignment && !flags.renewMapel) {
+    if(!flags.absen && !flags.checkAssignment && !flags.renewMapel && !flags.checkNotif) {
         if (flags.matkulList) listMatkul();
         return;
     }
@@ -213,14 +261,19 @@ async function EtholHook(){
         const page = await browser.newPage();
 
         await page.goto("https://ethol.pens.ac.id/");
-        if (flags.checkAssignment || flags.renewMapel){
+        if (flags.checkAssignment || flags.renewMapel || flags.checkNotif){
             page.on('response', async response => {
-        
-                if(flags.checkAssignment){
+
+                if(response.request().method().toUpperCase() != "OPTION"){
+                    if(flags.checkAssignment){
                     await checkNewAssignment(response)
-                }
-                if (flags.renewMapel){
-                    await RenewMapel(response)
+                    }
+                    if (flags.renewMapel){
+                        await RenewMapel(response)
+                    }
+                    if(flags.checkNotif){
+                        await checkNewNotification(response)
+                    }
                 }
                     
                 
@@ -237,10 +290,9 @@ async function EtholHook(){
         await page.locator("input#password").fill(password);
         await page.locator("input.btn-submit").click();
         
-        await sleep(2000);
-        
+        await sleep(1000)
         await page.reload();
-        await sleep(3000);
+        await sleep(3000)
 
         
         if (flags.absen){
@@ -284,6 +336,12 @@ async function readArg(){
                     i++
                 }
                 break;
+            case "-n":
+                flags.checkNotif = 1;
+                break;
+            case "--config":
+                setUser(arg[i+1],arg[i+2])
+                break
 
         }
     }
@@ -291,7 +349,7 @@ async function readArg(){
 
 (async function main(){
     if(arg[2] === "--help"){
-        console.log("arg:\n  -t             Check Assignment\n  -t -raw        Output raw data of Assignment\n  -r             Update Matkuls (semester update)\n  -a {matkul}    Fill Precency in the given matkul\n  -d             Disable headless (for debugging)\n  -l             Show current matkuls\n  -l -raw        Show Matkuls information\nRun with -r to update matkulDetail.json file\n");
+        console.log("arg:\n  -t             Check Assignment\n  -t -raw        Output raw data of Assignment\n  -r             Update Matkuls (semester update)\n  -a {matkul}    Fill Precency in the given matkul\n  -d             Disable headless (for debugging)\n  -l             Show current matkuls\n  -l -raw        Show Matkuls information\nRun with -r to update matkulDetail.json file\n  -n             Check New Notification\n  --config {username} {password} Set account to log into ethol");
         for (let i = 0;i<arrayMatkul.length;i++){
             console.log(`matkul ${i} = ${arrayMatkul[i]}`);
         }
