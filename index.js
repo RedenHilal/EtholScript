@@ -5,8 +5,6 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os'
-import { resolve } from "node:path";
-import { exit } from "node:process";
 
 const envOs = os.platform === "win32"? "windows":"linux"
 
@@ -204,7 +202,7 @@ async function EtholHook(){
     const path = await getBinaryPath();
     if(!path){
         console.log("exiting now...");
-        exit(1);
+        process.exit(1);
     }
     
     const browser = await puppeteer.launch({
