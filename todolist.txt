@@ -1,5 +1,7 @@
-1. add check new notification feature, save it into log json and use it to compare to newest notification
+xx done    1. add check new notification feature, save it into log json and use it to compare to newest notification
 xx done    2. improve the reading arg function and implementation
 xx done    3. change the getmatkul implementation to fully utilize json, not string
-4. as point above, remove usage of jq
+xx done    4. as point above, remove usage of jq
 xx done    5. config for data path
+6. add handle for nonexistent json file
+7. more error handle
