@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os'
+import { skip } from "node:test";
 
 
 const envOs = os.platform === "win32"? "windows":"linux"
@@ -13,8 +14,7 @@ const filename = fileURLToPath(import.meta.url)
 const dirpath = dirname(filename)
 
 dotenv.config({path:`${dirpath}/.env`})
-const username = process.env.USERNAME
-const password = process.env.PASSWORD
+
 const arg = process.argv
 
 const flags  = {
@@ -33,7 +33,9 @@ const arrayMatkul = (await readMatkulJSON()).map((el)=>el.matakuliah.nama)
 
 async function setUser(name,pass){
     try{
-        fs.writeFileSync(`${dirpath}/.env`, `USERNAME=${name}\nPASSWORD=${pass}`)
+        const encodedpass = btoa(pass)
+        const encryptedpass = encodedpass//.slice(0,encodedpass.length )
+        fs.writeFileSync(`${dirpath}/.env`, `USERNAME=${name}\nPASSWORD=${encryptedpass}`)
         console.log("Config Updated Successfully")
     }
     catch(err){
@@ -99,6 +101,7 @@ async function RenewMapel(response){
         const responUrl = await response.request().url()
         const urlRegex = /[?&]tahun=\d+&semester=\d+/
         if(urlRegex.test(responUrl)){
+            //console.log(responUrl[responUrl.length - 1])
             const body = await response.json()
             await fs.writeFileSync(`${dirpath}/matkulDetail.json`, JSON.stringify(body,null,2))
             console.log("Renewed Successfully")
@@ -114,6 +117,9 @@ async function RenewMapel(response){
 
 async function importMatkul(){
     try{
+        // if(!fs.existsSync(`${dirpath}/matkulDetail.json`)){
+        //     fs.writeFileSync(`${dirpath}/matkulDetail.json`,"[]")
+        // }
         const file = await fs.readFileSync(`${dirpath}/matkulDetail.json`,'utf8')
         const matkulData = JSON.parse(file)
         for (let i = 0;i<matkulData.length;i++){
@@ -246,6 +252,13 @@ async function EtholHook(){
         return;
     }
     if (flags.matkulList) listMatkul();
+    if(!process.env.USERNAME || !process.env.PASSWORD){
+        console.log("No profile found, run with --config to set profile")
+        process.exit(1);
+    }
+    const username = process.env.USERNAME
+    const password = atob(process.env.PASSWORD)
+
 
     const path = await getBinaryPath();
     if(!path){
@@ -290,9 +303,12 @@ async function EtholHook(){
         await page.locator("input#password").fill(password);
         await page.locator("input.btn-submit").click();
         
-        await sleep(1000)
-        await page.reload();
         await sleep(3000)
+        if(!flags.absen){
+            throw new Error("0")
+        }
+        await page.reload();
+        await sleep(2000)
 
         
         if (flags.absen){
@@ -301,7 +317,9 @@ async function EtholHook(){
 
     }
     catch(err){
-        console.log(err)
+        if(err.message !== '0'){
+            console.log(err)
+        }
     } finally{
         await browser.close();
     }
