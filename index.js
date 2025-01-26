@@ -5,7 +5,6 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import os from 'os'
-import { skip } from "node:test";
 
 
 const envOs = os.platform === "win32"? "windows":"linux"
@@ -70,6 +69,9 @@ async function getBinaryPath(){
 }
 
 async function readMatkulJSON (){
+    if(!fs.existsSync(`${dirpath}/matkulDetail.json`)){
+        await fs.writeFileSync(`${dirpath}/matkulDetail.json`,"[]")
+    }
         const file = await fs.readFileSync(`${dirpath}/matkulDetail.json`, 'utf8')
         return JSON.parse(file);
 }
@@ -96,16 +98,18 @@ async function checkNew(output){
         })
     })
 }
+
 async function RenewMapel(response){
     try{
         const responUrl = await response.request().url()
         const urlRegex = /[?&]tahun=\d+&semester=\d+/
         if(urlRegex.test(responUrl)){
-            //console.log(responUrl[responUrl.length - 1])
+            const semester = responUrl[responUrl.length - 1]
             const body = await response.json()
             await fs.writeFileSync(`${dirpath}/matkulDetail.json`, JSON.stringify(body,null,2))
             console.log("Renewed Successfully")
             await importMatkul()
+            console.log(`\nYou're currently in semester ${semester}`)
         }
         
         
@@ -113,7 +117,6 @@ async function RenewMapel(response){
         console.error(err)
     }
 }
-
 
 async function importMatkul(){
     try{
@@ -151,6 +154,7 @@ async function Absen(page){
     }
 
 }
+
 async function listMatkul(){
     const file = await fs.readFileSync(`${dirpath}/matkulDetail.json`,'utf8')
     const raw = JSON.parse(file)
@@ -163,6 +167,7 @@ async function listMatkul(){
         }
     }
 }
+
 async function checkNewAssignment(response){
     const requestUrl = await response.request().url()
     if(requestUrl === "https://ethol.pens.ac.id/api/tugas/tugas-terakhir-mahasiswa"){
@@ -209,6 +214,7 @@ async function checkNewAssignment(response){
         }
     }   
 }
+
 async function checkNewNotification(response){
     const responseUrl = await response.request().url()
     try{
